@@ -1,5 +1,7 @@
 # GTA VI 概念登录页
 
+[**在线预览**](https://strawpp.github.io/gta6-login-concept/) · [MIT License](LICENSE)
+
 > **非官方粉丝概念页。** 本项目为个人学习与前端练习作品，与 Rockstar Games、Take-Two Interactive 无任何关联，未获其授权或认可。
 >
 > 页面中使用的 GTA VI 美术图、名称与标志版权归 Rockstar Games 所有（出处见 [assets/SOURCES.md](assets/SOURCES.md)），仅作为个人非商业演示引用，不随本仓库的 MIT 许可证授权。若权利人提出要求，将立即移除相关素材。<br>
@@ -15,8 +17,11 @@
 
 ## 在线访问
 
-- GitHub Pages：<https://USERNAME.github.io/REPO/>
+- GitHub Pages：<https://strawpp.github.io/gta6-login-concept/>
+- 仓库地址：<https://github.com/Strawpp/gta6-login-concept>
 - 临时分享（本机需先 `npm run dev`）：`cloudflared tunnel --url http://127.0.0.1:5173`
+
+> Pages 首次生效需要 1–3 分钟；若链接返回 404，先确认 Settings → Pages 里 Source 已选 `main` / `/ (root)`。
 
 ## 预览截图
 
