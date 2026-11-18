@@ -1,0 +1,17 @@
+# 依赖与构建产物（本项目为纯静态页面，正常不需要）
+node_modules/
+dist/
+build/
+
+# 系统与编辑器杂项
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.log
+
+# 本地个人配置
+.env
+.env.local

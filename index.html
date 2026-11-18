@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#20182c">
+  <meta name="description" content="GTA VI 非官方概念登录页，纯前端娱乐演示。">
+  <title>GTA VI · 欢迎来到罪恶城</title>
+  <link rel="icon" href="assets/images/gta-vi.png">
+  <link rel="preload" href="assets/images/jason-lucia.jpg" as="image">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></symbol>
+    <symbol id="i-wechat" viewBox="0 0 24 24"><path class="icon-fill" d="M10 3C4.5 3 1 6 1 9.6c0 2.1 1.2 4 3.2 5.3L3.3 18l3.6-1.9c.9.2 1.7.3 2.6.3-.6-1-.9-2-.9-3.2 0-3.6 3.6-6.5 8.1-6.6C15.4 4.4 12.9 3 10 3Zm-3 4.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm5.5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM16.3 8C12.3 8 9 10.3 9 13.2s3.3 5.2 7.3 5.2c.7 0 1.4-.1 2-.2l2.9 1.6-.7-2.6c1.6-1 2.5-2.4 2.5-4C23 10.3 20 8 16.3 8Zm-2.4 3.4a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Zm4.7 0a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Z"/></symbol>
+    <symbol id="i-qq" viewBox="0 0 24 24"><path class="icon-fill" d="M12 2C8.9 2 7 5.1 7 8.7c0 .8.1 1.6.3 2.3C5.8 13 4 16 4.8 17.1c.4.5 1.1.1 2-.6.2 1 .7 1.9 1.4 2.6-1.5.4-2.1 1.1-1.6 1.7 1 1 4 .8 5.4-.1 1.4.9 4.4 1.1 5.4.1.5-.6-.1-1.3-1.6-1.7.7-.7 1.2-1.6 1.4-2.6.9.7 1.6 1.1 2 .6.8-1.1-1-4.1-2.5-6.1.2-.7.3-1.5.3-2.3C17 5.1 15.1 2 12 2Z"/></symbol>
+    <symbol id="i-notice" viewBox="0 0 24 24"><path d="M4 10v4h4l10 5V5L8 10H4Zm4 4 2 7M21 9v6"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m10 3-.7 2.2-2 .9-2.2-.5-2 3.4 1.5 1.7v2.5L3 15l2 3.4 2.3-.5 2 .9.7 2.2h4l.7-2.2 2-.9 2.3.5 2-3.4-1.6-1.8v-2.5L21 9l-2-3.4-2.3.5-2-.9L14 3h-4Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4M2 8l-1 4 3 2m18 2 1-4-3-2"/></symbol>
+  </svg>
+
+  <div class="background" id="background" aria-hidden="true">
+    <div class="background-slide" id="slide-a"></div>
+    <div class="background-slide" id="slide-b"></div>
+  </div>
+  <div class="atmosphere" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="film-grain" aria-hidden="true"></div>
+
+  <main class="login-screen" id="login-screen">
+    <header class="top-bar">
+      <div class="brand">
+        <img class="brand-logo" src="assets/images/gta-vi.png" alt="Grand Theft Auto VI" width="168" height="144">
+        <span class="brand-edition">LEONIDA · CONCEPT EDITION</span>
+      </div>
+      <div class="world-label"><span class="live-dot"></span> VICE CITY, LEONIDA <span class="world-time">26° N · 80° W</span></div>
+      <span class="build-label">BUILD 0.1.0</span>
+    </header>
+
+    <nav class="utility-bar" aria-label="页面工具">
+      <button class="utility-button" data-dialog="notice" aria-label="公告"><span class="utility-emblem"><svg aria-hidden="true"><use href="#i-notice"/></svg></span><span class="utility-label">公告</span><i class="notification-dot"></i></button>
+      <button class="utility-button" data-dialog="settings" aria-label="设置"><span class="utility-emblem"><svg aria-hidden="true"><use href="#i-settings"/></svg></span><span class="utility-label">设置</span></button>
+      <button class="utility-button" id="fullscreen-button" aria-label="进入全屏"><span class="utility-emblem"><svg aria-hidden="true"><use href="#i-fullscreen"/></svg></span><span class="utility-label">全屏</span></button>
+      <button class="utility-button" data-dialog="about" aria-label="关于"><span class="utility-emblem"><svg aria-hidden="true"><use href="#i-info"/></svg></span><span class="utility-label">关于</span></button>
+    </nav>
+
+    <section class="login-panel" aria-label="选择登录方式">
+      <div class="login-buttons">
+        <button class="login-button wechat" data-login="微信登录"><svg aria-hidden="true"><use href="#i-wechat"/></svg><span>与微信好友玩</span></button>
+        <button class="login-button qq" data-login="QQ 登录"><svg aria-hidden="true"><use href="#i-qq"/></svg><span>与QQ好友玩</span></button>
+      </div>
+      <div class="login-secondary">
+        <button class="guest-link" data-login="游客体验"><svg aria-hidden="true"><use href="#i-user"/></svg>游客体验</button>
+        <span class="secondary-divider" aria-hidden="true"></span>
+        <p class="agreement">继续即表示已阅读<button data-dialog="terms">《用户协议》</button>与<button data-dialog="privacy">《隐私说明》</button></p>
+      </div>
+    </section>
+
+    <footer class="bottom-bar">
+      <div class="scene-meta" hidden><span class="scene-index" id="scene-index">01 / 04</span><span class="scene-divider"></span><span id="scene-name">杰森与露西娅</span></div>
+      <span class="footer-center">美国阳光最盛之处，亦有最阴暗的一面。</span>
+      <div class="scene-controls" id="scene-controls" aria-label="背景选择" hidden></div>
+    </footer>
+  </main>
+
+  <aside class="rotate-prompt" aria-label="横屏提示">
+    <img src="assets/images/gta-vi.png" alt="Grand Theft Auto VI" width="130" height="115">
+    <svg><use href="#i-phone"/></svg>
+    <h2>横过来，进入罪恶城</h2>
+    <p>横屏观看，完整体验雷奥奈达的日落。</p>
+    <span>ROTATE YOUR DEVICE</span>
+  </aside>
+
+  <dialog id="modal" aria-labelledby="modal-title">
+    <div class="modal-shell">
+      <button class="modal-close" id="modal-close" aria-label="关闭弹窗"><svg><use href="#i-close"/></svg></button>
+      <span class="modal-eyebrow" id="modal-eyebrow">LEONIDA BULLETIN</span>
+      <h2 id="modal-title"></h2>
+      <div id="modal-content"></div>
+      <div class="modal-bottom"><span>VICE CITY · LEONIDA</span><span>VI</span></div>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript><div class="noscript-message">请开启 JavaScript 以体验背景轮播和页面交互。</div></noscript>
+</body>
+</html>
