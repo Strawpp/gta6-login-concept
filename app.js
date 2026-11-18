@@ -2,11 +2,13 @@
 (() => {
   'use strict';
 
+  // 每张背景按「WebP 优先、JPEG 兜底」的顺序加载：WebP 单张仅 100~160KB，
+  // 慢速网络下也能在超时前完成，避免整页退化成无背景状态。
   const scenes = [
-    { name: '杰森与露西娅', file: 'assets/images/jason-lucia.jpg', focus: '50% 0%' },
-    { name: '海岸假日', file: 'assets/images/beach.jpg', focus: '50% 0%' },
-    { name: '屋顶之上', file: 'assets/images/rooftop.jpg', focus: '50% 0%' },
-    { name: '罪恶城明信片', file: 'assets/images/vice-city.jpg', focus: '50% 50%' }
+    { name: '杰森与露西娅', sources: ['assets/images/jason-lucia.webp', 'assets/images/jason-lucia.jpg'], focus: '50% 0%' },
+    { name: '海岸假日', sources: ['assets/images/beach.webp', 'assets/images/beach.jpg'], focus: '50% 0%' },
+    { name: '屋顶之上', sources: ['assets/images/rooftop.webp', 'assets/images/rooftop.jpg'], focus: '50% 0%' },
+    { name: '罪恶城明信片', sources: ['assets/images/vice-city.webp', 'assets/images/vice-city.jpg'], focus: '50% 50%' }
   ];
   const INTERVAL = 6000;
   const FADE = 1200;
@@ -67,6 +69,7 @@
     constructor() {
       this.layers = [$('#slide-a'), $('#slide-b')];
       this.images = new Map();
+      this.resolved = new Map();
       this.failed = new Set();
       this.current = -1;
       this.activeLayer = 1;
@@ -88,32 +91,46 @@
       });
     }
 
-    /** 超时也视为不可用，避免损坏或无法读取的素材阻塞整个页面。 */
+    /** 单张图逐个候选源尝试；全部失败才判定该背景不可用。 */
     load(index) {
       if (this.images.has(index)) return this.images.get(index);
-      const promise = new Promise((resolve) => {
+      const promise = (async () => {
+        for (const source of scenes[index].sources) {
+          const loaded = await this.tryLoad(source);
+          if (loaded) {
+            this.resolved.set(index, source);
+            return true;
+          }
+        }
+        this.failed.add(index);
+        this.dots[index].disabled = true;
+        this.dots[index].setAttribute('aria-label', `${scenes[index].name}：图片不可用`);
+        return false;
+      })();
+      this.images.set(index, promise);
+      return promise;
+    }
+
+    /** 单次加载，超时即放弃并中止请求，避免慢速链路把整个页面阻塞在等待上。 */
+    tryLoad(source) {
+      return new Promise((resolve) => {
         const image = new Image();
-        let finished = false;
-        const finish = (ok) => {
-          if (finished) return;
-          finished = true;
+        let settled = false;
+        const settle = (ok, abort = false) => {
+          if (settled) return;
+          settled = true;
           clearTimeout(timeout);
           image.onload = null;
           image.onerror = null;
-          if (!ok) {
-            this.failed.add(index);
-            this.dots[index].disabled = true;
-            this.dots[index].setAttribute('aria-label', `${scenes[index].name}：图片不可用`);
-          }
-          resolve(ok);
+          // 超时的请求仍在占用带宽，主动置空以让下一个候选源拿到链路。
+          if (abort) image.src = '';
+          resolve(ok ? source : null);
         };
-        const timeout = setTimeout(() => finish(false), 12000);
-        image.onload = () => finish(image.naturalWidth > 0);
-        image.onerror = () => finish(false);
-        image.src = scenes[index].file;
+        const timeout = setTimeout(() => settle(false, true), 8000);
+        image.onload = () => settle(image.naturalWidth > 0);
+        image.onerror = () => settle(false);
+        image.src = source;
       });
-      this.images.set(index, promise);
-      return promise;
     }
 
     async start() {
@@ -169,9 +186,11 @@
       const layerIndex = 1 - this.activeLayer;
       const layer = this.layers[layerIndex];
       const previous = this.layers[this.activeLayer];
-      layer.style.backgroundImage = `url("${scenes[next].file}")`;
-      layer.style.backgroundPosition = scenes[next].focus;
-      layer.style.transformOrigin = scenes[next].focus;
+      const scene = scenes[next];
+      const resolved = this.resolved.get(next) || scene.sources[0];
+      layer.style.backgroundImage = `url("${resolved}")`;
+      layer.style.backgroundPosition = scene.focus;
+      layer.style.transformOrigin = scene.focus;
       // 新图叠在不透明的旧图上淡入，防止交叉透明时露出底色造成闪黑。
       layer.style.transitionDuration = first || reducedMotion.matches ? '0ms' : `${FADE}ms`;
       previous.style.transitionDuration = '0ms';
@@ -256,7 +275,7 @@
       openDialog('让风景随你而动', 'DISPLAY SETTINGS', `
         <div class="setting-row"><div><strong>自动切换背景</strong><small>每 6 秒，遇见另一面雷奥奈达</small></div><button id="autoplay-switch" class="switch" role="switch" aria-label="自动切换背景" aria-checked="true"></button></div>
         <div class="setting-row"><div><strong>镜头缓慢移动</strong><small>${reducedMotion.matches ? '系统已启用减少动态效果' : '为静止的画面，添一点呼吸感'}</small></div><button id="motion-switch" class="switch" role="switch" aria-label="镜头缓慢移动" aria-checked="true"></button></div>
-        <div class="setting-scenes" aria-label="选择背景">${scenes.map((scene, index) => `<button class="scene-thumb" data-scene="${index}" aria-label="选择${scene.name}" aria-pressed="false"><img src="${scene.file}" alt="${scene.name}"></button>`).join('')}</div>`);
+        <div class="setting-scenes" aria-label="选择背景">${scenes.map((scene, index) => `<button class="scene-thumb" data-scene="${index}" aria-label="选择${scene.name}" aria-pressed="false"><img src="${scene.sources[0]}" alt="${scene.name}"></button>`).join('')}</div>`);
       $('#autoplay-switch').addEventListener('click', () => background.setPaused(!background.paused));
       $('#motion-switch').addEventListener('click', () => background.setMotion(!background.motion));
       background.syncSettings();
