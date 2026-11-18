@@ -264,7 +264,7 @@
     about: () => openDialog('一场罪恶城的白日梦', 'ABOUT THIS CONCEPT', `
       <p>这是一个非官方的 GTA VI 概念登录页，仅供娱乐与界面观赏，不代表 Rockstar Games 官方产品，也不提供游戏运行功能。</p>
       <p>美术素材来自 GTA VI 官方素材库，权利属于其各自所有者。全部登录按钮仅为本地演示。</p>
-      <p>CONCEPT EDITION · BUILD 0.2.0<br>献给每一个向往罪恶城日落的人。</p>`),
+      <p>CONCEPT EDITION · BUILD 0.2.1<br>献给每一个向往罪恶城日落的人。</p>`),
     terms: () => openDialog('用户协议', 'CONCEPT EXPERIENCE', `
       <p>本页面仅为非官方界面演示。点击任意登录按钮，仅会播放本地连接动画并展示欢迎弹窗，不会创建账号、登录第三方平台或进入真实游戏。</p>
       <p>你可以自由切换背景、调整动效并观赏页面。演示内容不构成真实游戏服务协议。</p>

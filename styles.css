@@ -33,20 +33,22 @@
 .utility-button:hover .utility-emblem:before,.utility-button:focus-visible .utility-emblem:before{border-color:#d3eaffb3;background:linear-gradient(135deg,#b4d6ff50,#4672b38c)}
 .utility-button:active{transform:scale(.93)}
 .notification-dot{position:absolute;right:9px;top:2px;width:4px;height:4px;border-radius:50%;background:#ffc1d7;box-shadow:0 0 7px #ffb0bd}
-/* 两个主入口采用对称六边形轮廓；焦点描边保留在未裁切的按钮上。 */
-.login-panel{position:absolute;bottom:max(10.2%,calc(var(--inset-bottom) + 12px));left:50%;transform:translateX(-50%);width:min(540px,calc(var(--stage-width)*.65))}
-.login-buttons{display:flex;justify-content:center;gap:20px}
-.login-button{--button-top:#398a4c66;--button-bottom:#16673d80;--button-border:#a3e6af55;--tip:24px;position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;gap:13px;flex:1;min-width:0;height:56px;border:0;padding:0 34px;background:transparent;transition:transform .2s,filter .2s;filter:drop-shadow(0 4px 9px #100b284d)}
-.login-button:before,.login-button:after{content:"";position:absolute;inset:0;clip-path:polygon(var(--tip) 0,calc(100% - var(--tip)) 0,100% 50%,calc(100% - var(--tip)) 100%,var(--tip) 100%,0 50%);z-index:-1}
+/* 入口比例参考手游截图；缩小可见轮廓，仍保留至少 44px 高的触摸区域。 */
+.login-panel{position:absolute;bottom:max(10.2%,calc(var(--inset-bottom) + 12px));left:50%;transform:translateX(-50%);width:min(484px,max(266px,calc(var(--stage-width)*.35)))}
+.login-buttons{display:flex;justify-content:center;gap:clamp(10px,calc(var(--stage-width)*.016),24px)}
+.login-button{--button-top:#398a4c66;--button-bottom:#16673d80;--button-border:#a3e6af55;--button-height:clamp(30px,calc(var(--stage-height)*.078),52px);--button-inset:max(0px,calc((44px - var(--button-height))*.5));--tip:clamp(14px,calc(var(--stage-width)*.018),23px);position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;gap:clamp(5px,calc(var(--stage-width)*.008),10px);flex:1;min-width:0;height:max(44px,var(--button-height));border:0;padding:0 clamp(14px,calc(var(--stage-width)*.019),24px);background:transparent;transition:transform .2s,filter .2s;filter:drop-shadow(0 4px 9px #100b284d)}
+.login-button:before,.login-button:after{content:"";position:absolute;inset:var(--button-inset) 0;clip-path:polygon(var(--tip) 0,calc(100% - var(--tip)) 0,100% 50%,calc(100% - var(--tip)) 100%,var(--tip) 100%,0 50%);z-index:-1}
 .login-button:before{background:var(--button-border)}
-.login-button:after{inset:1px;background:linear-gradient(180deg,#ffffff12,transparent 46%),linear-gradient(120deg,var(--button-top),var(--button-bottom));box-shadow:inset 0 1px 0 #ffffff24,inset 0 -1px 0 #ffffff10;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.login-button:after{inset:calc(var(--button-inset) + 1px) 1px;background:linear-gradient(180deg,#ffffff12,transparent 46%),linear-gradient(120deg,var(--button-top),var(--button-bottom));box-shadow:inset 0 1px 0 #ffffff24,inset 0 -1px 0 #ffffff10;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .login-button.qq{--button-top:#3085bd66;--button-bottom:#15528d80;--button-border:#a7d5fa55}
-.login-button>svg{width:28px;height:28px;color:#fff;filter:drop-shadow(0 1px 1px #0002)}
-.login-button>span{font-size:18px;letter-spacing:2px;font-weight:600;white-space:nowrap;text-shadow:0 1px 2px #0003}
+.login-button>svg{width:clamp(16px,calc(var(--stage-width)*.022),24px);height:clamp(16px,calc(var(--stage-width)*.022),24px);color:#fff;filter:drop-shadow(0 1px 1px #0002)}
+.login-button>span{font-size:clamp(10px,calc(var(--stage-width)*.014),16px);letter-spacing:.5px;font-weight:600;white-space:nowrap;text-shadow:0 1px 2px #0003}
 .login-button:hover{transform:translateY(-2px);filter:brightness(1.15) drop-shadow(0 6px 12px #100b2855)}
 .login-button:active{transform:translateY(1px) scale(.98)}
 .login-button:disabled,.guest-link:disabled{opacity:.65}
-.login-secondary{display:flex;align-items:center;justify-content:center;gap:13px;margin-top:10px;min-height:36px}
+.login-secondary{position:relative;left:50%;transform:translateX(-50%);width:max-content;display:flex;align-items:center;justify-content:center;gap:13px;margin-top:10px;min-height:36px}
+/* 提示图与舞台一起旋转，放在工具栏内侧，避开登录入口与安全区域。 */
+.age-badge{position:absolute;right:max(calc(var(--stage-width)*.118),var(--safe-right));bottom:max(calc(var(--stage-height)*.075),calc(var(--inset-bottom) + 10px));width:clamp(36px,calc(var(--stage-width)*.05),70px);height:auto;filter:drop-shadow(0 2px 3px #0006);pointer-events:none}
 .guest-link{display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 4px;border:0;background:none;font-size:10px;letter-spacing:1px;color:#f0dcece0;white-space:nowrap;transition:color .2s}
 .guest-link svg{width:13px;height:13px}.guest-link:hover{color:#ffcee2}.guest-link:active{transform:translateY(1px)}
 .secondary-divider{width:1px;height:10px;background:#f0dcec40}
@@ -80,11 +82,7 @@ dialog[open] .modal-shell{animation:modal-in .23s ease-out}
 :root[data-compact="true"] .utility-emblem>svg{width:18px;height:18px}
 :root[data-compact="true"] .utility-label{font-size:7px;line-height:12px}
 :root[data-compact="true"] .notification-dot{right:7px;top:1px}
-:root[data-compact="true"] .login-panel{bottom:max(10%,calc(var(--inset-bottom) + 8px));width:min(470px,calc(var(--stage-width)*.64))}
-:root[data-compact="true"] .login-buttons{gap:16px}
-:root[data-compact="true"] .login-button{--tip:21px;height:46px;padding:0 27px;gap:10px}
-:root[data-compact="true"] .login-button>span{font-size:15px;letter-spacing:1.5px}
-:root[data-compact="true"] .login-button>svg{width:24px;height:24px}
+:root[data-compact="true"] .login-panel{bottom:max(10%,calc(var(--inset-bottom) + 8px))}
 :root[data-compact="true"] .login-secondary{gap:9px;margin-top:3px;min-height:30px}
 :root[data-compact="true"] .guest-link{min-height:30px;font-size:8px}
 :root[data-compact="true"] .guest-link svg{width:11px;height:11px}
@@ -103,10 +101,6 @@ dialog[open] .modal-shell{animation:modal-in .23s ease-out}
 :root[data-compact="true"] .setting-scenes{margin-top:13px}
 :root[data-compact="true"] .scene-thumb{aspect-ratio:2.2}
 :root[data-narrow="true"] .world-time{display:none}
-:root[data-narrow="true"] .login-panel{width:calc(var(--stage-width)*.68)}
-:root[data-narrow="true"] .login-buttons{gap:12px}
-:root[data-narrow="true"] .login-button{padding:0 23px;gap:8px}
-:root[data-narrow="true"] .login-button>span{font-size:14px}
 :root[data-narrow="true"] .utility-bar{right:max(15px,var(--inset-right));--utility-gap:6px}
 :root[data-narrow="true"] .footer-center{display:none}
 :root[data-narrow="true"] .brand-edition{font-size:5px}
