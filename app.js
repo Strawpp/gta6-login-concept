@@ -18,6 +18,42 @@
   let dialogGeneration = 0;
   let loginTimer;
 
+  /** 以网页实际可见区域建立横屏画布，不依赖系统自动旋转或方向锁定权限。 */
+  function syncViewport() {
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    // 手动捏合缩放时沿用布局视口，避免缩放操作反复触发画布旋转。
+    const useVisualViewport = viewport && Math.abs(viewport.scale - 1) < 0.01;
+    const width = useVisualViewport ? viewport.width : window.innerWidth;
+    const height = useVisualViewport ? viewport.height : window.innerHeight;
+    if (width <= 0 || height <= 0) return;
+    const rotated = height > width;
+    const stageWidth = Math.max(width, height);
+    const stageHeight = Math.min(width, height);
+    root.style.setProperty('--viewport-width', `${width}px`);
+    root.style.setProperty('--viewport-height', `${height}px`);
+    root.style.setProperty('--viewport-left', `${useVisualViewport ? viewport.offsetLeft : 0}px`);
+    root.style.setProperty('--viewport-top', `${useVisualViewport ? viewport.offsetTop : 0}px`);
+    root.style.setProperty('--stage-width', `${stageWidth}px`);
+    root.style.setProperty('--stage-height', `${stageHeight}px`);
+    root.style.setProperty('--stage-angle', rotated ? '90deg' : '0deg');
+    root.dataset.rotated = String(rotated);
+    root.dataset.compact = String(stageHeight <= 600);
+    root.dataset.narrow = String(stageWidth <= 740);
+  }
+
+  let viewportFrame = 0;
+  function scheduleViewportSync() {
+    cancelAnimationFrame(viewportFrame);
+    viewportFrame = requestAnimationFrame(syncViewport);
+  }
+  syncViewport();
+  window.addEventListener('resize', scheduleViewportSync);
+  window.addEventListener('orientationchange', scheduleViewportSync);
+  window.visualViewport?.addEventListener('resize', scheduleViewportSync);
+  window.visualViewport?.addEventListener('scroll', scheduleViewportSync);
+  window.addEventListener('pageshow', scheduleViewportSync);
+
   function toast(message) {
     const element = $('#toast');
     clearTimeout(toastTimer);
@@ -205,7 +241,7 @@
     $('#modal-eyebrow').textContent = eyebrow;
     $('#modal-content').innerHTML = content;
     if (!dialog.open) dialog.showModal();
-    dialog.scrollTop = 0;
+    $('.modal-shell').scrollTop = 0;
     $('.modal-close').focus({ preventScroll: true });
   }
 
@@ -228,7 +264,7 @@
     about: () => openDialog('一场罪恶城的白日梦', 'ABOUT THIS CONCEPT', `
       <p>这是一个非官方的 GTA VI 概念登录页，仅供娱乐与界面观赏，不代表 Rockstar Games 官方产品，也不提供游戏运行功能。</p>
       <p>美术素材来自 GTA VI 官方素材库，权利属于其各自所有者。全部登录按钮仅为本地演示。</p>
-      <p>CONCEPT EDITION · BUILD 0.1.0<br>献给每一个向往罪恶城日落的人。</p>`),
+      <p>CONCEPT EDITION · BUILD 0.2.0<br>献给每一个向往罪恶城日落的人。</p>`),
     terms: () => openDialog('用户协议', 'CONCEPT EXPERIENCE', `
       <p>本页面仅为非官方界面演示。点击任意登录按钮，仅会播放本地连接动画并展示欢迎弹窗，不会创建账号、登录第三方平台或进入真实游戏。</p>
       <p>你可以自由切换背景、调整动效并观赏页面。演示内容不构成真实游戏服务协议。</p>
@@ -266,8 +302,8 @@
   });
   $('.modal-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => {
-    const rect = dialog.getBoundingClientRect();
-    if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
+    // 弹窗内容与背景画布一起旋转，通过 DOM 归属判断遮罩点击，不计算旋转后的坐标。
+    if (!event.target.closest('.modal-shell')) dialog.close();
   });
   dialog.addEventListener('close', () => {
     clearTimeout(loginTimer);
@@ -279,15 +315,16 @@
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       else if (document.documentElement.requestFullscreen && document.fullscreenEnabled) await document.documentElement.requestFullscreen();
-      else toast('当前浏览器不支持全屏，请横屏观赏。');
+      else toast('当前浏览器不支持全屏，已按可用区域显示。');
     } catch {
-      toast('暂时无法进入全屏，请横屏或使用浏览器全屏功能。');
+      toast('暂时无法进入全屏，仍可正常观赏页面。');
     }
   });
   document.addEventListener('fullscreenchange', () => {
     const full = Boolean(document.fullscreenElement);
     $('#fullscreen-button').setAttribute('aria-label', full ? '退出全屏' : '进入全屏');
-    $('#fullscreen-button span').textContent = full ? '退出' : '全屏';
+    $('#fullscreen-button .utility-label').textContent = full ? '退出' : '全屏';
+    scheduleViewportSync();
   });
   document.addEventListener('visibilitychange', () => background.handleVisibility());
   reducedMotion.addEventListener('change', () => background.setMotion(!reducedMotion.matches));

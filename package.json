@@ -1,6 +1,6 @@
 {
   "name": "gta-vi-concept-login",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "GTA VI 非官方概念登录页，纯前端娱乐演示",
   "scripts": {
