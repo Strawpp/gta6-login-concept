@@ -126,7 +126,7 @@
           if (abort) image.src = '';
           resolve(ok ? source : null);
         };
-        const timeout = setTimeout(() => settle(false, true), 8000);
+        const timeout = setTimeout(() => settle(false, true), 12000);
         image.onload = () => settle(image.naturalWidth > 0);
         image.onerror = () => settle(false);
         image.src = source;
