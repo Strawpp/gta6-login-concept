@@ -1,6 +1,6 @@
 # 素材来源
 
-获取日期：2026-11-18。GTA VI 背景与标志直接取自 Rockstar Games 官网。
+获取日期：2026-11-18；新增四张美术图于 2026-11-20 获取。GTA VI 背景与标志直接取自 Rockstar Games 官网。
 
 官方素材库：https://www.rockstargames.com/VI/media/artwork-wallpapers
 
@@ -10,17 +10,23 @@
 | images/beach.jpg | 杰森与露西娅沙滩，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_and_Lucia_Beach_landscape.0419q._86ukpt.jpg |
 | images/rooftop.jpg | 杰森与露西娅屋顶，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_Lucia_Rooftop_landscape.0c6p5do~-8~7..jpg |
 | images/vice-city.jpg | 罪恶城明信片，横版 | https://www.rockstargames.com/VI/_next/static/media/Vice_City_Postcard_landscape.0v2njmlk2n-qm.jpg |
+| images/duo-02.original.jpg | 杰森与露西娅02，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_and_Lucia_02_landscape.0cosv-uzbpt91.jpg |
+| images/lock-load.original.jpg | 杰森与露西娅整装待发，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_Lucia_Lock_And_Load_landscape.0l9s5w7ih9p~3.jpg |
+| images/robbery.original.jpg | 杰森与露西娅进行抢劫，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_and_Lucia_Robbery_landscape.09c8a~do21h4p.jpg |
+| images/motel.original.jpg | 杰森与露西娅汽车旅馆，无徽标横版 | https://www.rockstargames.com/VI/_next/static/media/Jason_and_Lucia_Motel_landscape.08edvuwtm-20v.jpg |
 | images/gta-vi.png | 官网独立 GTA VI 标志 | https://www.rockstargames.com/VI/_next/static/media/vi.0hxa9~pf214xe.png |
 
 美术、人物与 GTA 标志的权利归相应权利人所有。本项目为非官方娱乐概念演示，不代表 Rockstar Games 发布的移动版游戏。微信、QQ 图标为内联图形，仅表达模拟入口，不接入真实平台。
 
 ## 派生优化版本
 
-上表四张 3840 × 2160 的原图（单张 1.3–2.1 MB）另存为 1600 × 900 的 WebP 副本：`images/jason-lucia.webp`、`beach.webp`、`rooftop.webp`、`vice-city.webp`。
+当前七张背景由原图生成到 `assets/backgrounds/`。`vice-city` 明信片已从轮播、预加载和设置中移除，旧文件仅作历史素材保留；`images/` 中旧版 WebP 不再用于当前页面。
 
-- 用途：页面背景。单张降到 104–155 KB，四张合计约 0.5 MB，慢速网络下也能在超时前加载完成。
-- 生成方式：等比例缩放到宽 1600，WebP 质量 80。
-- 原 JPEG 完整保留，作为不支持 WebP 或 WebP 加载失败时的兜底源。
+- `*.1280.webp`、`*.1600.webp`、`*.1920.webp`：等比例缩放，WebP 质量 82。根据首次打开时视口长边选择一档，不按高像素密度加载原始 4K 图；旋转不重复下载另一档。
+- `*.fallback.jpg`：1600px JPEG，质量 82、渐进加载；不支持 WebP 或 WebP 失败时使用，避免加载完整原图。
+- `*.thumb.jpg`：独立 320 × 180 JPEG，质量 76，仅用于设置缩略图。
+- 生成脚本：`tools/prepare-assets.py`，需要 Pillow，仅用于开发，页面运行无需 Python 或任何依赖。
+- 运行时首图优先、下一张逐张准备，下载及解码完成后挂入隐藏图层；失败图片有限重试，网络恢复或手动点击可重新尝试。
 
 ## 页面文案
 

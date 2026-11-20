@@ -1,0 +1,97 @@
+{
+  "cycles": 3,
+  "samples": [
+    {
+      "scene": "01 / 07",
+      "timeMs": 148
+    },
+    {
+      "scene": "02 / 07",
+      "timeMs": 6187
+    },
+    {
+      "scene": "03 / 07",
+      "timeMs": 12193
+    },
+    {
+      "scene": "04 / 07",
+      "timeMs": 18199
+    },
+    {
+      "scene": "05 / 07",
+      "timeMs": 24188
+    },
+    {
+      "scene": "06 / 07",
+      "timeMs": 30194
+    },
+    {
+      "scene": "07 / 07",
+      "timeMs": 36200
+    },
+    {
+      "scene": "01 / 07",
+      "timeMs": 42206
+    },
+    {
+      "scene": "02 / 07",
+      "timeMs": 48212
+    },
+    {
+      "scene": "03 / 07",
+      "timeMs": 54235
+    },
+    {
+      "scene": "04 / 07",
+      "timeMs": 60241
+    },
+    {
+      "scene": "05 / 07",
+      "timeMs": 66230
+    },
+    {
+      "scene": "06 / 07",
+      "timeMs": 72236
+    },
+    {
+      "scene": "07 / 07",
+      "timeMs": 78242
+    },
+    {
+      "scene": "01 / 07",
+      "timeMs": 84248
+    },
+    {
+      "scene": "02 / 07",
+      "timeMs": 90254
+    },
+    {
+      "scene": "03 / 07",
+      "timeMs": 96260
+    },
+    {
+      "scene": "04 / 07",
+      "timeMs": 102266
+    },
+    {
+      "scene": "05 / 07",
+      "timeMs": 108272
+    },
+    {
+      "scene": "06 / 07",
+      "timeMs": 114278
+    },
+    {
+      "scene": "07 / 07",
+      "timeMs": 120284
+    },
+    {
+      "scene": "01 / 07",
+      "timeMs": 126273
+    }
+  ],
+  "blankFrames": 0,
+  "frames": 7560,
+  "maxFrameGapMs": 38.5,
+  "complete": true
+}

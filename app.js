@@ -2,16 +2,25 @@
 (() => {
   'use strict';
 
-  // 每张背景按「WebP 优先、JPEG 兜底」的顺序加载：WebP 单张仅 100~160KB，
-  // 慢速网络下也能在超时前完成，避免整页退化成无背景状态。
+  // 依据首次打开时的画布选择一档资源；旋转后不重复下载，不随设备像素比盲目加载 4K。
+  const artworkWidth = Math.max(window.innerWidth, window.innerHeight);
+  const artworkSize = artworkWidth <= 1000 ? 1280 : artworkWidth <= 1600 ? 1600 : 1920;
+  const artwork = (key) => ({
+    sources: [`assets/backgrounds/${key}.${artworkSize}.webp`, `assets/backgrounds/${key}.fallback.jpg`],
+    thumbnail: `assets/backgrounds/${key}.thumb.jpg`
+  });
+  // 按环境与人物构图交替编排，所有背景均为不带徽标的完整横版美术图。
   const scenes = [
-    { name: '杰森与露西娅', sources: ['assets/images/jason-lucia.webp', 'assets/images/jason-lucia.jpg'], focus: '50% 0%' },
-    { name: '海岸假日', sources: ['assets/images/beach.webp', 'assets/images/beach.jpg'], focus: '50% 0%' },
-    { name: '屋顶之上', sources: ['assets/images/rooftop.webp', 'assets/images/rooftop.jpg'], focus: '50% 0%' },
-    { name: '罪恶城明信片', sources: ['assets/images/vice-city.webp', 'assets/images/vice-city.jpg'], focus: '50% 50%' }
+    { name: '杰森与露西娅', ...artwork('jason-lucia'), focus: '50% 0%' },
+    { name: '海岸假日', ...artwork('beach'), focus: '65% 0%' },
+    { name: '整装待发', ...artwork('lock-load'), focus: '40% 0%' },
+    { name: '屋顶之上', ...artwork('rooftop'), focus: '65% 0%' },
+    { name: '汽车旅馆', ...artwork('motel'), focus: '35% 15%' },
+    { name: '杰森与露西娅02', ...artwork('duo-02'), focus: '45% 0%' },
+    { name: '进行抢劫', ...artwork('robbery'), focus: '65% 0%' }
   ];
   const INTERVAL = 6000;
-  const FADE = 1200;
+  const FADE = 600;
   const $ = (selector) => document.querySelector(selector);
   const dialog = $('#modal-content').closest('dialog');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -32,16 +41,21 @@
     const rotated = height > width;
     const stageWidth = Math.max(width, height);
     const stageHeight = Math.min(width, height);
-    root.style.setProperty('--viewport-width', `${width}px`);
-    root.style.setProperty('--viewport-height', `${height}px`);
-    root.style.setProperty('--viewport-left', `${useVisualViewport ? viewport.offsetLeft : 0}px`);
-    root.style.setProperty('--viewport-top', `${useVisualViewport ? viewport.offsetTop : 0}px`);
-    root.style.setProperty('--stage-width', `${stageWidth}px`);
-    root.style.setProperty('--stage-height', `${stageHeight}px`);
-    root.style.setProperty('--stage-angle', rotated ? '90deg' : '0deg');
-    root.dataset.rotated = String(rotated);
-    root.dataset.compact = String(stageHeight <= 600);
-    root.dataset.narrow = String(stageWidth <= 740);
+    const values = {
+      '--viewport-width': `${width}px`, '--viewport-height': `${height}px`,
+      '--viewport-left': `${useVisualViewport ? viewport.offsetLeft : 0}px`,
+      '--viewport-top': `${useVisualViewport ? viewport.offsetTop : 0}px`,
+      '--stage-width': `${stageWidth}px`, '--stage-height': `${stageHeight}px`,
+      '--stage-angle': rotated ? '90deg' : '0deg'
+    };
+    // 微信地址栏可能重复发送相同尺寸事件，仅写入变化的值以减少整页样式计算。
+    Object.entries(values).forEach(([name, value]) => {
+      if (root.style.getPropertyValue(name) !== value) root.style.setProperty(name, value);
+    });
+    const flags = { rotated, compact: stageHeight <= 600, narrow: stageWidth <= 740 };
+    Object.entries(flags).forEach(([name, value]) => {
+      if (root.dataset[name] !== String(value)) root.dataset[name] = String(value);
+    });
   }
 
   let viewportFrame = 0;
@@ -64,152 +78,250 @@
     toastTimer = setTimeout(() => element.classList.remove('visible'), 3200);
   }
 
-  /** 双图层先加载再切换；失败图片只跳过，不让当前画面消失。 */
+  /** 隐藏层提前挂载已解码图片；切换时仅合成透明度，旧图保持不透明以避免闪黑。 */
   class BackgroundController {
     constructor() {
       this.layers = [$('#slide-a'), $('#slide-b')];
       this.images = new Map();
-      this.resolved = new Map();
       this.failed = new Set();
       this.current = -1;
       this.activeLayer = 1;
       this.paused = false;
-      this.motion = !reducedMotion.matches;
-      document.body.classList.toggle('motion-off', !this.motion);
+      this.motion = true;
       this.busy = false;
       this.timer = null;
+      this.pendingManual = null;
+      this.prepared = null;
+      this.prepareTask = null;
+      this.generation = 0;
+      this.fadeAnimation = null;
       this.zoomAnimations = new Map();
-      this.dots = scenes.map((scene, index) => {
-        const button = document.createElement('button');
-        button.className = 'scene-dot';
-        button.type = 'button';
-        button.setAttribute('aria-label', `切换背景：${scene.name}`);
-        button.setAttribute('aria-pressed', 'false');
-        button.addEventListener('click', () => this.show(index, true));
-        $('#scene-controls').append(button);
-        return button;
-      });
+      this.retryTimer = null;
+      this.retryCount = 0;
     }
 
-    /** 单张图逐个候选源尝试；全部失败才判定该背景不可用。 */
+    get suspended() { return this.paused || document.hidden || dialog.open; }
+
+    /** 失败保留冷却时间并允许一次自动重试；JPEG 兜底同样使用适合展示的尺寸。 */
     load(index) {
-      if (this.images.has(index)) return this.images.get(index);
-      const promise = (async () => {
+      const cached = this.images.get(index);
+      if (cached && (!cached.failed || Date.now() < cached.retryAt)) return cached.promise;
+      const entry = { failed: false, retryAt: 0, attempts: (cached?.attempts || 0) + 1 };
+      entry.promise = (async () => {
         for (const source of scenes[index].sources) {
-          const loaded = await this.tryLoad(source);
-          if (loaded) {
-            this.resolved.set(index, source);
-            return true;
+          const image = await this.tryLoad(source, index === 0);
+          if (image) {
+            this.failed.delete(index);
+            return image;
           }
         }
+        entry.failed = true;
+        entry.retryAt = entry.attempts < 2 ? Date.now() + 15000 : Infinity;
         this.failed.add(index);
-        this.dots[index].disabled = true;
-        this.dots[index].setAttribute('aria-label', `${scenes[index].name}：图片不可用`);
-        return false;
+        this.syncSettings();
+        return null;
       })();
-      this.images.set(index, promise);
-      return promise;
+      this.images.set(index, entry);
+      return entry.promise;
     }
 
-    /** 单次加载，超时即放弃并中止请求，避免慢速链路把整个页面阻塞在等待上。 */
-    tryLoad(source) {
+    /** 下载和解码都完成后才交付图片，保留 Image 对象并直接挂载，避免切图时再次更换背景纹理。 */
+    tryLoad(source, priority = false) {
       return new Promise((resolve) => {
         const image = new Image();
+        image.decoding = 'async';
+        image.fetchPriority = priority ? 'high' : 'low';
+        image.alt = '';
+        image.className = 'background-image';
         let settled = false;
-        const settle = (ok, abort = false) => {
+        const settle = (ok) => {
           if (settled) return;
           settled = true;
           clearTimeout(timeout);
           image.onload = null;
           image.onerror = null;
-          // 超时的请求仍在占用带宽，主动置空以让下一个候选源拿到链路。
-          if (abort) image.src = '';
-          resolve(ok ? source : null);
+          if (!ok) image.removeAttribute('src');
+          resolve(ok ? image : null);
         };
-        const timeout = setTimeout(() => settle(false, true), 12000);
-        image.onload = () => settle(image.naturalWidth > 0);
+        // 延续现有 12 秒容错，避免 GitHub Pages 冷节点被过早判为失效。
+        const timeout = setTimeout(() => settle(false), 12000);
+        image.onload = async () => {
+          try {
+            if (typeof image.decode === 'function') await image.decode();
+            settle(image.naturalWidth > 0);
+          } catch { settle(false); }
+        };
         image.onerror = () => settle(false);
         image.src = source;
       });
     }
 
+    /** 首图优先；首图慢时只额外竞争一张备选图，避免所有素材抢占首屏带宽。 */
     async start() {
-      // 四张本地图片并行预加载，首图成功后即可呈现，无须等待全部图片。
-      scenes.forEach((_, index) => this.load(index));
-      await this.show(0);
+      let fallbackTimer;
+      const primary = this.load(0).then(image => image ? 0 : -1);
+      const fallback = new Promise(resolve => {
+        fallbackTimer = setTimeout(() => this.load(1).then(image => resolve(image ? 1 : -1)), 1400);
+      });
+      const first = await Promise.race([primary, fallback]);
+      if (first === 0) clearTimeout(fallbackTimer);
+      await this.show(first >= 0 ? first : 0, true);
     }
 
+    /** 缩放与淡入分别作用于图片和外层；暂停只冻结时间，不取消动画，避免画面缩回原大小。 */
     animateZoom(layer) {
       this.zoomAnimations.get(layer)?.cancel();
       this.zoomAnimations.delete(layer);
-      if (this.motion && !reducedMotion.matches && typeof layer.animate === 'function') {
-        const animation = layer.animate(
+      const image = layer.querySelector('img');
+      if (image && typeof image.animate === 'function') {
+        const animation = image.animate(
           [{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }],
           { duration: INTERVAL + FADE, easing: 'linear', fill: 'forwards' }
         );
         this.zoomAnimations.set(layer, animation);
-        if (document.hidden || this.paused) animation.pause();
+        if (this.suspended || !this.motion || reducedMotion.matches) animation.pause();
       }
     }
 
     schedule(delay = INTERVAL) {
       clearTimeout(this.timer);
-      if (!this.paused && !document.hidden && this.current >= 0 && this.failed.size < scenes.length - 1) {
+      if (!this.suspended && !this.busy && this.current >= 0) {
         this.timer = setTimeout(() => this.show((this.current + 1) % scenes.length), delay);
       }
     }
 
+    /** 至少经过两个绘制帧，让隐藏层完成布局；后台 rAF 可能暂停，超时兜底避免锁住状态。 */
+    painted() {
+      return new Promise(resolve => {
+        const timeout = setTimeout(resolve, 120);
+        requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(timeout); resolve(); }));
+      });
+    }
+
+    mount(layerIndex, index, image) {
+      const layer = this.layers[layerIndex];
+      this.zoomAnimations.get(layer)?.cancel();
+      this.zoomAnimations.delete(layer);
+      layer.style.opacity = '0';
+      layer.style.zIndex = '1';
+      image.style.objectPosition = scenes[index].focus;
+      image.style.transformOrigin = scenes[index].focus;
+      layer.replaceChildren(image);
+      layer.dataset.scene = String(index);
+    }
+
+    /** 当前图展示期间仅准备下一张，避免扩充素材后同时保留大量已解码图片。 */
+    prepareNext() {
+      const generation = this.generation;
+      this.prepareTask = (async () => {
+        for (let step = 1; step < scenes.length; step++) {
+          const index = (this.current + step) % scenes.length;
+          const image = await this.load(index);
+          if (generation !== this.generation || this.busy) return;
+          if (!image) continue;
+          const layerIndex = 1 - this.activeLayer;
+          this.mount(layerIndex, index, image);
+          await this.painted();
+          if (generation === this.generation) this.prepared = { index, layerIndex };
+          return;
+        }
+      })();
+    }
+
+    /** 新图在旧图上以线性透明度淡入；跟随真实动画完成，后台与暂停状态可安全冻结。 */
+    async fadeIn(layer, duration) {
+      if (!duration || typeof layer.animate !== 'function') {
+        layer.style.opacity = '1';
+        return;
+      }
+      const animation = layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'linear', fill: 'forwards' });
+      this.fadeAnimation = animation;
+      if (document.hidden) animation.pause();
+      // 正常以 finished 为准；超时只为异常浏览器兜底，后台不计入强制完成。
+      const fallback = setTimeout(() => { if (!document.hidden) animation.finish(); }, duration + 500);
+      try { await animation.finished; } catch { /* 取消动画时仍保留新图，不清空当前画面。 */ }
+      clearTimeout(fallback);
+      layer.style.opacity = '1';
+      animation.cancel();
+      this.fadeAnimation = null;
+    }
+
     async show(requested, manual = false) {
-      if (this.busy) return;
+      if (this.busy) {
+        if (manual) this.pendingManual = requested;
+        return;
+      }
+      if (!manual && this.suspended) return;
       clearTimeout(this.timer);
+      clearTimeout(this.retryTimer);
       this.busy = true;
+      if (manual && this.failed.has(requested)) this.images.delete(requested);
+      const generation = ++this.generation;
       let next = requested;
-      let found = false;
+      let image = null;
       for (let attempt = 0; attempt < scenes.length; attempt++) {
-        if (await this.load(next)) { found = true; break; }
+        // 提前准备好的下一张优先使用；失败时继续保留旧图并寻找其他可用图。
+        image = await this.load(next);
+        if (image) break;
         next = (next + 1) % scenes.length;
       }
-      if (!found) {
+      if (!image) {
         this.busy = false;
-        $('#scene-index').textContent = '— / 04';
+        $('#scene-index').textContent = `— / ${String(scenes.length).padStart(2, '0')}`;
         $('#scene-name').textContent = '雷奥奈达';
-        toast('背景图片暂不可用，仍可体验页面按钮。');
+        if (this.retryCount === 0) toast('背景暂未加载，页面按钮仍可使用。');
+        if (this.retryCount++ < 1) this.retryTimer = setTimeout(() => this.show(0, true), 15000);
         this.syncSettings();
         return;
       }
+      // 等待下载期间用户可能打开了弹窗或切到后台，不在这时启动自动切换。
+      if (!manual && this.suspended) { this.busy = false; return; }
       if (next === this.current) {
         this.busy = false;
         this.schedule();
+        this.prepareNext();
+        this.runPending();
         return;
       }
       const first = this.current < 0;
       const layerIndex = 1 - this.activeLayer;
       const layer = this.layers[layerIndex];
       const previous = this.layers[this.activeLayer];
-      const scene = scenes[next];
-      const resolved = this.resolved.get(next) || scene.sources[0];
-      layer.style.backgroundImage = `url("${resolved}")`;
-      layer.style.backgroundPosition = scene.focus;
-      layer.style.transformOrigin = scene.focus;
-      // 新图叠在不透明的旧图上淡入，防止交叉透明时露出底色造成闪黑。
-      layer.style.transitionDuration = first || reducedMotion.matches ? '0ms' : `${FADE}ms`;
-      previous.style.transitionDuration = '0ms';
+      if (this.prepared?.index !== next || this.prepared.layerIndex !== layerIndex) {
+        this.mount(layerIndex, next, image);
+        await this.painted();
+      }
+      this.prepared = null;
       layer.style.zIndex = '1';
       previous.style.zIndex = '0';
       this.animateZoom(layer);
-      layer.classList.add('is-active');
+      const started = performance.now();
       this.current = next;
       this.activeLayer = layerIndex;
-      this.dots.forEach((dot, index) => dot.setAttribute('aria-pressed', String(index === next)));
-      $('#scene-index').textContent = `${String(next + 1).padStart(2, '0')} / 04`;
+      $('#scene-index').textContent = `${String(next + 1).padStart(2, '0')} / ${String(scenes.length).padStart(2, '0')}`;
       $('#scene-name').textContent = scenes[next].name;
       this.syncSettings();
       if (manual && next !== requested) toast('该背景暂不可用，已切换到下一张。');
-      setTimeout(() => {
-        previous.classList.remove('is-active');
-        this.busy = false;
-        this.schedule(first || reducedMotion.matches ? INTERVAL : INTERVAL - FADE);
-      }, first || reducedMotion.matches ? 0 : FADE);
+      // 弹窗下的手动选图直接更新，避免遮罩模糊和切图动画同时运行。
+      await this.fadeIn(layer, first || reducedMotion.matches || dialog.open ? 0 : FADE);
+      previous.style.opacity = '0';
+      this.zoomAnimations.get(previous)?.pause();
+      this.busy = false;
+      this.layers.forEach(item => { if (item !== layer) item.style.zIndex = '0'; });
+      // 释放其他图的 Image 引用；浏览器仍可复用 HTTP 缓存，解码工作移到下一张准备阶段。
+      for (const [index, entry] of this.images) {
+        if (index !== next && !entry.failed) this.images.delete(index);
+      }
+      if (generation === this.generation) this.prepareNext();
+      this.schedule(Math.max(0, INTERVAL - (performance.now() - started)));
+      this.runPending();
+    }
+
+    runPending() {
+      if (this.pendingManual === null) return;
+      const index = this.pendingManual;
+      this.pendingManual = null;
+      this.show(index, true);
     }
 
     setPaused(paused) {
@@ -219,18 +331,26 @@
     }
 
     setMotion(enabled) {
-      this.motion = enabled && !reducedMotion.matches;
-      this.layers.forEach((layer) => this.animateZoom(layer));
-      document.body.classList.toggle('motion-off', !this.motion);
-      this.syncSettings();
+      this.motion = enabled;
+      this.handleVisibility();
     }
 
     handleVisibility() {
       clearTimeout(this.timer);
       for (const animation of this.zoomAnimations.values()) {
-        if (document.hidden || this.paused) animation.pause();
+        // 只剩一张可用图时缩放可能已结束；不暂停/重播结束的动画，避免再次打开弹窗后缩回起点。
+        if (animation.playState === 'finished') continue;
+        if (this.suspended || !this.motion || reducedMotion.matches) animation.pause();
         else animation.play();
       }
+      if (this.fadeAnimation) {
+        if (dialog.open || this.paused || reducedMotion.matches) this.fadeAnimation.finish();
+        else if (document.hidden) this.fadeAnimation.pause();
+        else this.fadeAnimation.play();
+      }
+      document.body.classList.toggle('background-paused', this.suspended);
+      document.body.classList.toggle('motion-off', !this.motion || reducedMotion.matches);
+      this.syncSettings();
       this.schedule();
     }
 
@@ -244,7 +364,8 @@
       }
       document.querySelectorAll('.scene-thumb').forEach((button, index) => {
         button.setAttribute('aria-pressed', String(index === this.current));
-        button.disabled = this.failed.has(index);
+        button.dataset.unavailable = String(this.failed.has(index));
+        button.setAttribute('aria-label', `选择${scenes[index].name}${this.failed.has(index) ? '，暂不可用，可重试' : ''}`);
       });
     }
   }
@@ -260,30 +381,40 @@
     $('#modal-eyebrow').textContent = eyebrow;
     $('#modal-content').innerHTML = content;
     if (!dialog.open) dialog.showModal();
+    background.handleVisibility();
     $('.modal-shell').scrollTop = 0;
     $('.modal-close').focus({ preventScroll: true });
   }
 
   const pages = {
-    notice: () => openDialog('雷奥奈达来信', 'LEONIDA BULLETIN', `
+    notice: () => {
+      $('.notification-dot').hidden = true;
+      openDialog('雷奥奈达来信', 'LEONIDA BULLETIN', `
       <span class="notice-tag">欢迎来到罪恶城</span>
       <p class="notice-date">CONCEPT EDITION · VOL. 01</p>
       <p>棕榈树、海风、永不熄灭的霓虹。<br>这里的每一个日落，都像一个新故事的开场。</p>
-      <p>选一种方式，开启你的罪恶城之旅。也可以什么都不做，就在这里看一会儿风景。</p>
-      <button class="modal-action" data-close>收到了，出发吧 <span>↗</span></button>`),
+      <p>七幅官方美术，串起雷奥奈达的不同瞬间。你可以在设置中选择背景，或暂停画面，看一会儿风景。</p>
+      <p>这是一个非官方概念界面，好友入口仅播放本地演示，不会打开真实游戏或授权页面。</p>
+      <button class="modal-action" data-close>回到日落之中 <span>↗</span></button>`);
+    },
     settings: () => {
       openDialog('让风景随你而动', 'DISPLAY SETTINGS', `
-        <div class="setting-row"><div><strong>自动切换背景</strong><small>每 6 秒，遇见另一面雷奥奈达</small></div><button id="autoplay-switch" class="switch" role="switch" aria-label="自动切换背景" aria-checked="true"></button></div>
+        <div class="setting-row"><div><strong>自动切换背景</strong><small>每 6 秒切换；关闭后同时暂停镜头</small></div><button id="autoplay-switch" class="switch" role="switch" aria-label="自动切换背景" aria-checked="true"></button></div>
         <div class="setting-row"><div><strong>镜头缓慢移动</strong><small>${reducedMotion.matches ? '系统已启用减少动态效果' : '为静止的画面，添一点呼吸感'}</small></div><button id="motion-switch" class="switch" role="switch" aria-label="镜头缓慢移动" aria-checked="true"></button></div>
-        <div class="setting-scenes" aria-label="选择背景">${scenes.map((scene, index) => `<button class="scene-thumb" data-scene="${index}" aria-label="选择${scene.name}" aria-pressed="false"><img src="${scene.sources[0]}" alt="${scene.name}"></button>`).join('')}</div>`);
+        <div class="setting-scenes" aria-label="选择背景">${scenes.map((scene, index) => `<button class="scene-thumb" data-scene="${index}" aria-label="选择${scene.name}" aria-pressed="false"><img src="${scene.thumbnail}" alt="" width="320" height="180" decoding="async"><span>${scene.name}</span></button>`).join('')}</div>`);
       $('#autoplay-switch').addEventListener('click', () => background.setPaused(!background.paused));
       $('#motion-switch').addEventListener('click', () => background.setMotion(!background.motion));
+      document.querySelectorAll('.scene-thumb img').forEach((image, index) => {
+        // 独立 JPEG 缩略图异常时仅尝试一次展示用 JPEG，避免重复请求失效 WebP。
+        image.addEventListener('error', () => { image.src = scenes[index].sources[1]; }, { once: true });
+      });
       background.syncSettings();
     },
     about: () => openDialog('一场罪恶城的白日梦', 'ABOUT THIS CONCEPT', `
       <p>这是一个非官方的 GTA VI 概念登录页，仅供娱乐与界面观赏，不代表 Rockstar Games 官方产品，也不提供游戏运行功能。</p>
       <p>美术素材来自 GTA VI 官方素材库，权利属于其各自所有者。全部登录按钮仅为本地演示。</p>
-      <p>CONCEPT EDITION · BUILD 0.2.1<br>献给每一个向往罪恶城日落的人。</p>`),
+      <p>页面中的“12+ 适龄提示”为参考界面的装饰，不代表 GTA VI 的实际分级或认证。</p>
+      <p>CONCEPT EDITION · BUILD 0.3.0<br>献给每一个向往罪恶城日落的人。</p>`),
     terms: () => openDialog('用户协议', 'CONCEPT EXPERIENCE', `
       <p>本页面仅为非官方界面演示。点击任意登录按钮，仅会播放本地连接动画并展示欢迎弹窗，不会创建账号、登录第三方平台或进入真实游戏。</p>
       <p>你可以自由切换背景、调整动效并观赏页面。演示内容不构成真实游戏服务协议。</p>
@@ -322,12 +453,13 @@
   $('.modal-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => {
     // 弹窗内容与背景画布一起旋转，通过 DOM 归属判断遮罩点击，不计算旋转后的坐标。
-    if (!event.target.closest('.modal-shell')) dialog.close();
+    if (!event.target.closest('.modal-frame')) dialog.close();
   });
   dialog.addEventListener('close', () => {
     clearTimeout(loginTimer);
     dialogGeneration++;
     opener?.focus({ preventScroll: true });
+    background.handleVisibility();
   });
 
   $('#fullscreen-button').addEventListener('click', async () => {
@@ -346,6 +478,14 @@
     scheduleViewportSync();
   });
   document.addEventListener('visibilitychange', () => background.handleVisibility());
-  reducedMotion.addEventListener('change', () => background.setMotion(!reducedMotion.matches));
+  // 系统偏好仅约束当前效果，不覆盖用户主动关闭镜头运动的选择。
+  reducedMotion.addEventListener('change', () => background.handleVisibility());
+  window.addEventListener('online', () => {
+    for (const index of background.failed) background.images.delete(index);
+    background.failed.clear();
+    background.retryCount = 0;
+    background.show(background.current >= 0 ? background.current : 0, true);
+  });
+  background.handleVisibility();
   background.start();
 })();

@@ -1,10 +1,11 @@
 {
   "name": "gta-vi-concept-login",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "GTA VI 非官方概念登录页，纯前端娱乐演示",
   "scripts": {
     "dev": "node server.cjs",
-    "check": "node --check app.js && node --check server.cjs"
+    "check": "node --check app.js && node --check server.cjs && node --check tools/verification-server.cjs && node --check tools/monitor-playback.js",
+    "test": "node --test tests/background.test.cjs"
   }
 }

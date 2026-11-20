@@ -7,9 +7,11 @@
   <meta name="description" content="GTA VI 非官方概念登录页，纯前端娱乐演示。">
   <title>GTA VI · 欢迎来到罪恶城</title>
   <link rel="icon" href="assets/images/gta-vi.png">
-  <link rel="preload" href="assets/images/jason-lucia.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="styles.css?v=0.2.2">
-  <script src="app.js?v=0.2.2" defer></script>
+  <link rel="preload" href="assets/backgrounds/jason-lucia.1280.webp" as="image" type="image/webp" media="(max-width: 1000px) and (max-height: 1000px)" fetchpriority="high">
+  <link rel="preload" href="assets/backgrounds/jason-lucia.1600.webp" as="image" type="image/webp" media="(min-width: 1000.01px) and (max-width: 1600px) and (max-height: 1600px), (min-height: 1000.01px) and (max-width: 1600px) and (max-height: 1600px)" fetchpriority="high">
+  <link rel="preload" href="assets/backgrounds/jason-lucia.1920.webp" as="image" type="image/webp" media="(min-width: 1600.01px), (min-height: 1600.01px)" fetchpriority="high">
+  <link rel="stylesheet" href="styles.css?v=0.3.0">
+  <script src="app.js?v=0.3.0" defer></script>
 </head>
 <body>
   <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -29,9 +31,7 @@
     <div class="background-slide" id="slide-a"></div>
     <div class="background-slide" id="slide-b"></div>
   </div>
-  <div class="atmosphere" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
-  <div class="film-grain" aria-hidden="true"></div>
 
   <main class="login-screen" id="login-screen">
     <header class="top-bar">
@@ -39,8 +39,7 @@
         <img class="brand-logo" src="assets/images/gta-vi.png" alt="Grand Theft Auto VI" width="168" height="144">
         <span class="brand-edition">LEONIDA · CONCEPT EDITION</span>
       </div>
-      <div class="world-label"><span class="live-dot"></span> VICE CITY, LEONIDA <span class="world-time">26° N · 80° W</span></div>
-      <span class="build-label">BUILD 0.2.1</span>
+      <div class="world-label"><span class="live-dot"></span> VICE CITY, LEONIDA</div>
     </header>
 
     <nav class="utility-bar" aria-label="页面工具">
@@ -58,14 +57,14 @@
       <div class="login-secondary">
         <button class="guest-link" data-login="游客体验"><svg aria-hidden="true"><use href="#i-user"/></svg>游客体验</button>
         <span class="secondary-divider" aria-hidden="true"></span>
-        <p class="agreement">继续即表示已阅读<button data-dialog="terms">《用户协议》</button>与<button data-dialog="privacy">《隐私说明》</button></p>
+        <p class="agreement"><span>阅读</span><button data-dialog="terms">《用户协议》</button><span>与</span><button data-dialog="privacy">《隐私说明》</button></p>
       </div>
     </section>
 
     <img class="age-badge" src="assets/images/age-12.svg" alt="12+ 适龄提示（界面演示）" width="100" height="132">
 
     <footer class="bottom-bar">
-      <div class="scene-meta" hidden><span class="scene-index" id="scene-index">01 / 04</span><span class="scene-divider"></span><span id="scene-name">杰森与露西娅</span></div>
+      <div class="scene-meta" hidden><span class="scene-index" id="scene-index">01 / 07</span><span class="scene-divider"></span><span id="scene-name">杰森与露西娅</span></div>
       <span class="footer-center">美国阳光最盛之处，亦有最阴暗的一面。</span>
       <div class="scene-controls" id="scene-controls" aria-label="背景选择" hidden></div>
     </footer>
@@ -77,12 +76,14 @@
 
   <dialog id="modal" aria-labelledby="modal-title">
     <div class="modal-stage">
+    <div class="modal-frame">
+      <button class="modal-close" id="modal-close" aria-label="关闭弹窗"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
     <div class="modal-shell">
-      <button class="modal-close" id="modal-close" aria-label="关闭弹窗"><svg><use href="#i-close"/></svg></button>
       <span class="modal-eyebrow" id="modal-eyebrow">LEONIDA BULLETIN</span>
       <h2 id="modal-title"></h2>
       <div id="modal-content"></div>
       <div class="modal-bottom"><span>VICE CITY · LEONIDA</span><span>VI</span></div>
+    </div>
     </div>
     </div>
   </dialog>
